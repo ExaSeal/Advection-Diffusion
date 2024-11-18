@@ -203,16 +203,64 @@ def FTBSCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt):
     return phi
 
 
-def FTCSCS_Adv_Dif_periodic(phi, D, u, dx, dt, nt):
-    K = D * dt / (dx**2)
+def FTCSCS_Adv_Dif_periodic(phi, u, K, dx, dt, nt):
+    D = K * dt / (dx**2)
     C = u * dt / dx
     nx = len(phi)
     phi_new = np.zeros(nx)
 
     for i in range(nt):
         for j in range(nx):
-            phi_new[j] = K * (
+            phi_new[j] = D * (
                 phi[(j + 1) % nx] + phi[(j - 1) % nx] - 2 * phi[j]
             ) - 0.5 * C * (phi[(j + 1) % nx] - phi[(j - 1) % nx] + phi[j])
         phi = phi_new.copy()
+    return phi
+
+
+def FTCSCS_Adv1_Dif2_periodic(phi, u, K, dx, dt, nt):
+    D = K * dt / dx**2
+    C = u * dt / dx
+
+    nx = len(phi)
+    phi_a = np.zeros(nx)
+    phi_ad = np.zeros(nx)
+
+    for i in range(nt):
+        for j in range(nx):
+            phi_a[j] = (
+                -0.5 * C * (phi[(j + 1) % nx] - phi[(j - 1) % nx] + phi[j])
+            )
+
+            phi_ad[j] = (
+                D * (phi[(j + 1) % nx] + phi[(j - 1) % nx] - 2 * phi[j])
+                + phi_ad[j]
+            )
+
+        phi = phi_ad.copy()
+    return phi
+
+
+def FTCSCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt):
+    D = K * dt / dx**2
+    C = u * dt / dx
+
+    nx = len(phi)
+    phi_d = np.zeros(nx)
+    phi_da = np.zeros(nx)
+
+    for i in range(nt):
+        for j in range(nx):
+            phi_d[j] = (
+                D * (phi[(j + 1) % nx] + phi[(j - 1) % nx] - 2 * phi[j])
+                + phi[j]
+            )
+
+            phi_da[j] = (
+                -0.5
+                * C
+                * (phi_d[(j + 1) % nx] - phi_d[(j - 1) % nx] + phi_d[j])
+            )
+
+        phi = phi_da.copy()
     return phi
