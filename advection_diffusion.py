@@ -173,6 +173,7 @@ def FTCS_Adv1_Dif2_periodic(phi, u, K, dx, dt, nt):
     for i in range(nt):
         for j in range(nx):
             phi_a[j] = -C * (phi[(j)] - phi[(j - 1) % nx]) + phi[j]
+
             phi_ad[j] = (
                 D * (phi_a[(j + 1) % nx] + phi_a[(j - 1) % nx] - 2 * phi_a[j])
                 + phi_a[j]
@@ -195,6 +196,7 @@ def FTCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt):
                 D * (phi[(j + 1) % nx] + phi[(j - 1) % nx] - 2 * phi[j])
                 + phi[j]
             )
+
             phi_da[j] = -C * (phi_d[(j)] - phi_d[(j - 1) % nx]) + phi_d[j]
 
         phi = phi_da.copy()
