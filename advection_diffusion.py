@@ -144,7 +144,7 @@ def BTCS_Adv2_Dif1_Periodic(phi, u, K, dx, dt, nt):
     return phi
 
 
-def FTCS_Upwind_periodic(phi, u, K, dx, dt, nt):
+def FTBSCS_Adv_Dif_periodic(phi, u, K, dx, dt, nt):
     D = K * dt / dx**2
     C = u * dt / dx
 
@@ -162,7 +162,7 @@ def FTCS_Upwind_periodic(phi, u, K, dx, dt, nt):
     return phi
 
 
-def FTCS_Adv1_Dif2_periodic(phi, u, K, dx, dt, nt):
+def FTBSCS_Adv1_Dif2_periodic(phi, u, K, dx, dt, nt):
     D = K * dt / dx**2
     C = u * dt / dx
 
@@ -182,7 +182,7 @@ def FTCS_Adv1_Dif2_periodic(phi, u, K, dx, dt, nt):
     return phi
 
 
-def FTCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt):
+def FTBSCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt):
     D = K * dt / dx**2
     C = u * dt / dx
 
@@ -200,4 +200,19 @@ def FTCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt):
             phi_da[j] = -C * (phi_d[(j)] - phi_d[(j - 1) % nx]) + phi_d[j]
 
         phi = phi_da.copy()
+    return phi
+
+
+def FTCSCS_Adv_Dif_periodic(phi, D, u, dx, dt, nt):
+    K = D * dt / (dx**2)
+    C = u * dt / dx
+    nx = len(phi)
+    phi_new = np.zeros(nx)
+
+    for i in range(nt):
+        for j in range(nx):
+            phi_new[j] = K * (
+                phi[(j + 1) % nx] + phi[(j - 1) % nx] - 2 * phi[j]
+            ) - 0.5 * C * (phi[(j + 1) % nx] - phi[(j - 1) % nx] + phi[j])
+        phi = phi_new.copy()
     return phi
