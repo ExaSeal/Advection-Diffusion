@@ -81,9 +81,42 @@ def RMSE(phi, phi_analytic):
     -------
     RMSE : Root Mean Square Error
     """
-    RMSE = np.sqrt(sum((phi - phi_analytic) ** 2)) / len(phi)
+    RMSE = np.sqrt(sum((phi - phi_analytic) ** 2 / len(phi)))
+    return RMSE
+
+
+def l_2_norm(phi, phi_analytic, dx):
+    """
+    Calculate the l2 normalized error for convergence test over dx
+
+    Parameters
+    ----------
+    phi : Estimate
+    phi_analytic : True value
+    dx : Space step size
+
+    Returns
+    -------
+    RMSE : Root Mean Square Error
+    """
+    RMSE = np.sqrt(sum(dx * (phi - phi_analytic) ** 2)) / np.sqrt(
+        sum(dx * (phi) ** 2)
+    )
 
     return RMSE
+
+
+def BTCS_parallel_split(phi, u, K, dx, dt, nt):
+    M_a = matrix_BTCS_adv_periodic(phi, u, dt, dx)
+    M_d = matrix_BTCS_dif_periodic(phi, K, dt, dx)
+
+    for i in range(nt):
+        phi_a = np.dot(np.linalg.inv(M_a), phi)
+        phi_d = np.dot(np.linalg.inv(M_d), phi)
+
+        phi = phi_a + phi_d - phi
+
+    return phi
 
 
 def BTCS_Adv_Dif_Periodic(phi, u, K, dx, dt, nt):
@@ -118,8 +151,7 @@ def BTCS_Adv_Dif_Periodic(phi, u, K, dx, dt, nt):
         M[i, (i + 1) % len(phi)] = -D + C / 2
 
     for i in range(nt):
-        phi_new = np.dot(np.linalg.inv(M), phi)
-        phi = phi_new.copy()
+        phi = np.linalg.solve(M, phi)
 
     return phi
 
@@ -129,7 +161,7 @@ def BTCS_Adv1_Dif2_Periodic(phi, u, K, dx, dt, nt):
     M_d = matrix_BTCS_dif_periodic(phi, K, dt, dx)
 
     for i in range(nt):
-        phi_a = np.dot(np.linalg.inv(M_a), phi)
+        phi_a = np.linalg.solve(M_a, phi)
         phi = np.dot(np.linalg.inv(M_d), phi_a)
     return phi
 
@@ -263,4 +295,153 @@ def FTCSCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt):
             )
 
         phi = phi_da.copy()
+    return phi
+
+
+def ADA(phi, u, K, dx, dt, nt):
+    D = K * dt / dx**2
+    C = u * dt / dx
+    M_1 = np.zeros([len(phi), len(phi)])
+    M_2 = np.zeros([len(phi), len(phi)])
+    for i in range(len(phi)):
+        # Diagonals (phi_j)
+        M_1[i, i] = 1
+
+        # Left and right of diagonals (phi_j-1 and phi_j+1) with periodic boundary
+        M_1[i, (i - 1) % len(phi)] = -C / 4
+        M_1[i, (i + 1) % len(phi)] = C / 4
+    for i in range(len(phi)):
+        # Diagonals (phi_j)
+        M_2[i, i] = 1 + 2 * D
+
+        # Left and right of diagonals (phi_j-1 and phi_j+1 )with periodic boundary
+        M_2[i, (i - 1) % len(phi)] = -D
+        M_2[i, (i + 1) % len(phi)] = -D
+    for i in range(nt):
+        phi1 = np.linalg.solve(M_1, phi)
+        phi2 = np.linalg.solve(M_2, phi1)
+        phi = np.linalg.solve(M_1, phi2)
+    return phi
+
+
+def DAD(phi, u, K, dx, dt, nt):
+    D = K * dt / dx**2
+    C = u * dt / dx
+    M_1 = np.zeros([len(phi), len(phi)])
+    M_2 = np.zeros([len(phi), len(phi)])
+    for i in range(len(phi)):
+        # Diagonals (phi_j)
+        M_1[i, i] = 1 + D
+
+        # Left and right of diagonals (phi_j-1 and phi_j+1 )with periodic boundary
+        M_1[i, (i - 1) % len(phi)] = -D / 2
+        M_1[i, (i + 1) % len(phi)] = -D / 2
+    for i in range(len(phi)):
+        # Diagonals (phi_j)
+        M_2[i, i] = 1
+
+        # Left and right of diagonals (phi_j-1 and phi_j+1) with periodic boundary
+        M_2[i, (i - 1) % len(phi)] = -C / 2
+        M_2[i, (i + 1) % len(phi)] = C / 2
+    for i in range(nt):
+        phi1 = np.linalg.solve(M_1, phi)
+        phi2 = np.linalg.solve(M_2, phi1)
+        phi = np.linalg.solve(M_1, phi2)
+    return phi
+
+
+def mixed_ADA_DAD(phi, u, K, dx, dt, nt):
+    D = K * dt / dx**2
+    C = u * dt / dx
+    eta = np.sin(2 * np.pi / (1 + (C / D)))
+    phi = eta * ADA(phi, u, K, dx, dt, nt) + (1 - eta) * DAD(
+        phi, u, K, dx, dt, nt
+    )
+    return phi
+
+
+def CNCS(phi, u, K, dx, dt, nt):
+    C = u * dt / dx
+    D = K * dt / dx**2
+    M = np.zeros([len(phi), len(phi)])
+    M_RHS = np.zeros([len(phi), len(phi)])
+    for i in range(len(phi)):
+        # Diagonals (phi_j)
+        M[i, i] = 4 + 4 * D
+        M_RHS[i, i] = 4 - 4 * D
+
+        # Left and right of diagonals (phi_j-1 and phi_j+1) with periodic boundary
+        M[i, (i - 1) % len(phi)] = (-2 * D) - (C)
+        M[i, (i + 1) % len(phi)] = (-2 * D) + (C)
+        M_RHS[i, (i - 1) % len(phi)] = (2 * D) + (C)
+        M_RHS[i, (i + 1) % len(phi)] = (2 * D) - (C)
+
+    for i in range(nt):
+        phi = np.linalg.solve(M, np.dot(M_RHS, phi))
+    return phi
+
+
+def CNCS_AD(phi, u, K, dx, dt, nt):
+    C = u * dt / dx
+    D = K * dt / dx**2
+    M_a = np.zeros([len(phi), len(phi)])
+    M_a_RHS = np.zeros([len(phi), len(phi)])
+    M_d = np.zeros([len(phi), len(phi)])
+    M_d_RHS = np.zeros([len(phi), len(phi)])
+    for i in range(len(phi)):
+        # Diagonals (phi_j)
+        M_a[i, i] = 4
+        M_a_RHS[i, i] = 4
+
+        # Left and right of diagonals (phi_j-1 and phi_j+1) with periodic boundary
+        M_a[i, (i - 1) % len(phi)] = -(C)
+        M_a[i, (i + 1) % len(phi)] = +(C)
+        M_a_RHS[i, (i - 1) % len(phi)] = +(C)
+        M_a_RHS[i, (i + 1) % len(phi)] = -(C)
+
+        # Diagonals (phi_j)
+        M_d[i, i] = 4 + 4 * D
+        M_d_RHS[i, i] = 4 - 4 * D
+
+        # Left and right of diagonals (phi_j-1 and phi_j+1) with periodic boundary
+        M_d[i, (i - 1) % len(phi)] = -2 * D
+        M_d[i, (i + 1) % len(phi)] = -2 * D
+        M_d_RHS[i, (i - 1) % len(phi)] = 2 * D
+        M_d_RHS[i, (i + 1) % len(phi)] = 2 * D
+    for i in range(nt):
+        phi_a = np.linalg.solve(M_a, np.dot(M_a_RHS, phi))
+        phi = np.linalg.solve(M_d, np.dot(M_d_RHS, phi_a))
+    return phi
+
+
+def CNCS_DA(phi, u, K, dx, dt, nt):
+    C = u * dt / dx
+    D = K * dt / dx**2
+    M_a = np.zeros([len(phi), len(phi)])
+    M_a_RHS = np.zeros([len(phi), len(phi)])
+    M_d = np.zeros([len(phi), len(phi)])
+    M_d_RHS = np.zeros([len(phi), len(phi)])
+    for i in range(len(phi)):
+        # Diagonals (phi_j)
+        M_a[i, i] = 4
+        M_a_RHS[i, i] = 4
+
+        # Left and right of diagonals (phi_j-1 and phi_j+1) with periodic boundary
+        M_a[i, (i - 1) % len(phi)] = -(C)
+        M_a[i, (i + 1) % len(phi)] = +(C)
+        M_a_RHS[i, (i - 1) % len(phi)] = +(C)
+        M_a_RHS[i, (i + 1) % len(phi)] = -(C)
+
+        # Diagonals (phi_j)
+        M_d[i, i] = 4 + 4 * D
+        M_d_RHS[i, i] = 4 - 4 * D
+
+        # Left and right of diagonals (phi_j-1 and phi_j+1) with periodic boundary
+        M_d[i, (i - 1) % len(phi)] = -2 * D
+        M_d[i, (i + 1) % len(phi)] = -2 * D
+        M_d_RHS[i, (i - 1) % len(phi)] = 2 * D
+        M_d_RHS[i, (i + 1) % len(phi)] = 2 * D
+    for i in range(nt):
+        phi_d = np.linalg.solve(M_d, np.dot(M_d_RHS, phi))
+        phi = np.linalg.solve(M_a, np.dot(M_a_RHS, phi_d))
     return phi
