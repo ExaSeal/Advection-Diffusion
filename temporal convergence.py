@@ -22,17 +22,17 @@ from scipy.stats import linregress
 
 # Set constants
 A = 1
-K = 1.5
-u = 0.1
-C = 0.1
-endtime = 10
-L = 20
+K = 0.5
+u = 1
+C = 0.5
+endtime = 100
+L = 50
 
-Search_for_grid_point = 200
+Search_for_grid_point = 100
 
 # Initiate step-dependent lists
 run_time = []
-nt_add = 60
+nt_add = 20
 nx_list = []
 nt_list = []
 dx_list = []
@@ -92,16 +92,16 @@ for i, (nx, nt) in enumerate(zip(nx_list, nt_list)):
     phi_CNCS_AD = CNCS_AD(phi.copy(), u, K, dx, dt, nt)
     phi_CNCS_DA = CNCS_DA(phi.copy(), u, K, dx, dt, nt)
 
-    error_same.append(RMSE(phi_same, phi_analytic, dx))
-    error_adv.append(RMSE(phi_adv, phi_analytic, dx))
-    error_dif.append(RMSE(phi_dif, phi_analytic, dx))
-    error_parallel.append(RMSE(phi_parallel, phi_analytic, dx))
-    error_ADA.append(RMSE(phi_ADA, phi_analytic, dx))
-    error_DAD.append(RMSE(phi_DAD, phi_analytic, dx))
-    error_mixed.append(RMSE(phi_mixed_ADA_DAD, phi_analytic, dx))
-    error_CNCS.append(RMSE(phi_CNCS, phi_analytic, dx))
-    error_CNCS_AD.append(RMSE(phi_CNCS_AD, phi_analytic, dx))
-    error_CNCS_DA.append(RMSE(phi_CNCS_DA, phi_analytic, dx))
+    error_same.append(RMSE(phi_same, phi_analytic))
+    error_adv.append(RMSE(phi_adv, phi_analytic))
+    error_dif.append(RMSE(phi_dif, phi_analytic))
+    error_parallel.append(RMSE(phi_parallel, phi_analytic))
+    error_ADA.append(RMSE(phi_ADA, phi_analytic))
+    error_DAD.append(RMSE(phi_DAD, phi_analytic))
+    error_mixed.append(RMSE(phi_mixed_ADA_DAD, phi_analytic))
+    error_CNCS.append(RMSE(phi_CNCS, phi_analytic))
+    error_CNCS_AD.append(RMSE(phi_CNCS_AD, phi_analytic))
+    error_CNCS_DA.append(RMSE(phi_CNCS_DA, phi_analytic))
     phi_schemes = [
         phi_same,
         phi_adv,
@@ -127,7 +127,17 @@ for i, (nx, nt) in enumerate(zip(nx_list, nt_list)):
         "CNCS_DA",
     ]
 
-    plot_scheme(x, nt, phi, phi_analytic, phi_schemes, phi_label)
+    plot_scheme(
+        x,
+        nt,
+        dt,
+        phi,
+        phi_analytic,
+        phi_schemes,
+        phi_label,
+        [0, L],
+        [-A - 0.3, A + 0.3],
+    )
 
 
 plt.plot(dt_list, error_same, label="BTCS Same", marker="o")

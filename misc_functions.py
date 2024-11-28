@@ -75,7 +75,7 @@ def plot_scheme_separate(
 def plot_error(phi_error, phi_label, dx, dt, C, D):
     fig, ax = plt.subplots(figsize=(10, 6))
     plt.ylabel("RMSE")
-    plt.xlabel("Time simulated (x*0.05)")
+    plt.xlabel("Time simulated (x*{dt:.3f})")
     plt.title(f"dx = {dx}, dt = {dt}, C = {C:.3f}, D = {D:.3f}")
 
     # Loop to plot errors and print average error
@@ -105,3 +105,33 @@ def calc_slope(dx_list, error_list):
     slope, intercept, r_value, p_value, std_err = linregress(log_dx, log_error)
 
     return slope
+
+
+def find_max(C_values, D_values, kdx_list, A_eq):
+    """
+    Generate a array (i corresponds to Courant number, j corresponds to Diffusion number) of maximum amplifying factor given by the equation A_eq through iterating
+
+    Parameters
+    ----------
+    C_values : Array of Courant numbers to test for (0.00001 to inf)
+    D_values : Array of Diffusion numbers to test for (0.00001 to inf)
+    kdx_list : k*dx values (0 to 2*pi)
+    A_eq : Equation for the amplifcation factor (a function(D,C,kdx))
+
+    Returns
+    -------
+    A_max : Array (C by D) of maximum amplification factor
+
+    """
+    A_max = np.zeros((len(C_values), len(D_values)))
+    # Compute maximum A for each pair of (C, D)
+    for i, C in enumerate(C_values):
+        for j, D in enumerate(D_values):
+            for kdx in kdx_list:
+                max_A = -np.inf
+                A = A_eq(D, C, kdx)
+                if A > max_A:
+                    max_A = A
+            A_max[i, j] = max_A
+
+    return A_max

@@ -151,7 +151,8 @@ for i, (nx, nt) in enumerate(zip(nx_list, nt_list)):
     ]
 
     plot_scheme(x, nt, phi, phi_analytic, phi_schemes, phi_label)
-
+C = u * dt / dx
+D = K * dt / (dx**2)
 
 plt.plot(dx_list, error_same, label="BTCS Same", marker="o")
 plt.plot(dx_list, error_adv, label="BTCS Adv", marker="s")
@@ -166,9 +167,9 @@ plt.plot(dx_list, error_CNCS_DA, label="CNCS DA", marker="h")
 # Customize the plot
 plt.xscale("log")  # Optional: Use a logarithmic scale for dx
 plt.yscale("log")  # Optional: Use a logarithmic scale for errors
-plt.xlabel("Grid Spacing (dx)")
 plt.ylabel("RMSE")
-plt.title("Error vs. Grid Spacing for Various Schemes")
+plt.xlabel("Grid spacing (dx)")
+plt.title(f"u = {u:.3}, C = {C:.3}, K = {K:.3}")
 plt.legend()
 plt.grid(True, which="both", linestyle="--", linewidth=0.5)
 

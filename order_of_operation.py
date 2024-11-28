@@ -24,7 +24,7 @@ end_length = 1
 L = end_length - start_length
 
 # Scheme setting
-K = 0.005
+K = 0.001
 u = 0.5
 nx = 100
 nt = 100
@@ -61,7 +61,7 @@ error_CNCS_DA = np.zeros(len(nt_list))
 # Check FTCS stability constraints
 C = u * dt / dx
 D = K * dt / (dx**2)
-
+print(f"C = {C}, D = {D}")
 for p in range(len(nt_list)):
     plt.figure(p)
     nt = nt_list[p]
