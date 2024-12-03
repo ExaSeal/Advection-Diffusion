@@ -24,10 +24,10 @@ end_length = 1
 L = end_length - start_length
 
 # Scheme setting
-K = 0.001
+K = 0.005
 u = 0.5
-nx = 100
-nt = 100
+nx = 99
+nt = 50
 endtime = 10
 steps = 20
 

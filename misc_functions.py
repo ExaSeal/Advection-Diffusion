@@ -75,7 +75,7 @@ def plot_scheme_separate(
 def plot_error(phi_error, phi_label, dx, dt, C, D):
     fig, ax = plt.subplots(figsize=(10, 6))
     plt.ylabel("RMSE")
-    plt.xlabel("Time simulated (x*{dt:.3f})")
+    plt.xlabel(f"Time simulated (x*{dt:.3})")
     plt.title(f"dx = {dx}, dt = {dt}, C = {C:.3f}, D = {D:.3f}")
 
     # Loop to plot errors and print average error

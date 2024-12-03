@@ -8,9 +8,10 @@ from misc_functions import *
 
 
 # Square wave settings
-A = 1
+A = 0.3
 x_start = 0.2
 x_end = 0.4
+k = 2
 
 # Domain size
 start_length = 0
@@ -18,12 +19,12 @@ end_length = 1
 L = end_length - start_length
 
 # Scheme setting
-K = 0.005
-u = 0.5
+K = 1e-3
+u = 1
 nx = 50
 nt = 50
-endtime = 10
-steps = 20
+endtime = 1
+steps = 10
 
 phi = np.zeros(nx)
 
@@ -35,7 +36,7 @@ D = K * dt / (dx**2)
 
 
 x = np.arange(start_length, end_length, dx)
-nt_list = np.unique(np.linspace(0, endtime, steps, dtype=int))
+nt_list = np.unique(np.linspace(0, nt, steps, dtype=int))
 print(f"Simulation initilized for T={endtime}, K ={K}, u={u}:")
 print(f"nt = {nx}, nt = {nt}")
 print(f"dx = {dx}, dx = {dt}")
@@ -44,16 +45,12 @@ print(f"Showing {len(nt_list)} frames")
 error_same = np.zeros(len(nt_list))
 error_adv = np.zeros(len(nt_list))
 error_dif = np.zeros(len(nt_list))
-error_FTBSCS = np.zeros(len(nt_list))
-error_FTBSCS_adv = np.zeros(len(nt_list))
-error_FTBSCS_dif = np.zeros(len(nt_list))
-error_parallel = np.zeros(len(nt_list))
-error_ADA = np.zeros(len(nt_list))
-error_DAD = np.zeros(len(nt_list))
-error_mixed = np.zeros(len(nt_list))
 error_CNCS = np.zeros(len(nt_list))
 error_CNCS_AD = np.zeros(len(nt_list))
 error_CNCS_DA = np.zeros(len(nt_list))
+error_FTBS = np.zeros(len(nt_list))
+error_FTBS_AD = np.zeros(len(nt_list))
+error_FTBS_DA = np.zeros(len(nt_list))
 # %%
 
 
@@ -63,45 +60,46 @@ for p in range(len(nt_list)):
 
     for j in range(nx):
         x[j] = dx * j
-        phi[j] = analytical_sine_adv_dif(u, K, L, A, x[j], 0)
+        phi[j] = analytical_sine_adv_dif(
+            u, K, k, L, A, x[j], 0
+        ) + analytical_sine_adv_dif(u, K, 3, L, A, x[j], 0)
 
-        phi_analytic[j] = analytical_sine_adv_dif(u, K, L, A, x[j], nt * dt)
+        phi_analytic[j] = analytical_sine_adv_dif(
+            u, K, k, L, A, x[j], nt * dt
+        ) + analytical_sine_adv_dif(u, K, 3, L, A, x[j], nt * dt)
     # Solve for Adv_Dif using different schemes and record values
 
     phi_same = BTCS_Adv_Dif_Periodic(phi.copy(), u, K, dx, dt, nt)
     phi_adv = BTCS_Adv1_Dif2_Periodic(phi.copy(), u, K, dx, dt, nt)
     phi_dif = BTCS_Adv2_Dif1_Periodic(phi.copy(), u, K, dx, dt, nt)
-    phi_parallel = BTCS_parallel_split(phi, u, K, dx, dt, nt)
-    phi_ADA = ADA(phi, u, K, dx, dt, nt)
-    phi_DAD = DAD(phi, u, K, dx, dt, nt)
-    phi_mixed_ADA_DAD = mixed_ADA_DAD(phi, u, K, dx, dt, nt)
     phi_CNCS = CNCS(phi, u, K, dx, dt, nt)
     phi_CNCS_AD = CNCS_AD(phi, u, K, dx, dt, nt)
     phi_CNCS_DA = CNCS_DA(phi, u, K, dx, dt, nt)
+    # phi_FTBSCS = FTBSCS_Adv_Dif_periodic(phi, u, K, dx, dt, nt)
+    # phi_FTBSCS_AD = FTBSCS_Adv1_Dif2_periodic(phi, u, K, dx, dt, nt)
+    # phi_FTBSCS_DA = FTBSCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt)
 
     phi_schemes = [
         phi_same,
         phi_adv,
         phi_dif,
-        phi_parallel,
-        phi_ADA,
-        phi_DAD,
-        phi_mixed_ADA_DAD,
         phi_CNCS,
         phi_CNCS_AD,
         phi_CNCS_DA,
+        # phi_FTBSCS,
+        # phi_FTBSCS_AD,
+        # phi_FTBSCS_DA,
     ]
     phi_label = [
-        "Whole Matrix",
-        "Advection First",
-        "Diffusion First",
-        "Parallel Split",
-        "ADA",
-        "DAD",
-        "mixed ADA,DAD",
+        "BTCS",
+        "BTCS_AD",
+        "BTCS_DA",
         "CNCS",
         "CNCS_AD",
         "CNCS_DA",
+        # "FTBS",
+        # "FTBS_AD",
+        # "FTBS_DA",
     ]
 
     # Plot results
@@ -121,25 +119,24 @@ for p in range(len(nt_list)):
     error_same[p] = RMSE(phi_same, phi_analytic)
     error_adv[p] = RMSE(phi_adv, phi_analytic)
     error_dif[p] = RMSE(phi_dif, phi_analytic)
-    error_parallel[p] = RMSE(phi_parallel, phi_analytic)
-    error_ADA[p] = RMSE(phi_ADA, phi_analytic)
-    error_DAD[p] = RMSE(phi_DAD, phi_analytic)
-    error_mixed[p] = RMSE(phi_mixed_ADA_DAD, phi_analytic)
     error_CNCS[p] = RMSE(phi_CNCS, phi_analytic)
     error_CNCS_AD[p] = RMSE(phi_CNCS_AD, phi_analytic)
     error_CNCS_DA[p] = RMSE(phi_CNCS_AD, phi_analytic)
+    error_FTBS[p] = RMSE(phi_CNCS_AD, phi_analytic)
+    error_FTBS_AD[p] = RMSE(phi_CNCS_AD, phi_analytic)
+    error_FTBS_DA[p] = RMSE(phi_CNCS_AD, phi_analytic)
+
 
 phi_error = [
     error_same,
     error_adv,
     error_dif,
-    error_parallel,
-    error_ADA,
-    error_DAD,
-    error_mixed,
     error_CNCS,
     error_CNCS_AD,
     error_CNCS_DA,
+    error_FTBS,
+    error_FTBS_AD,
+    error_FTBS_DA,
 ]
 
 
@@ -156,3 +153,8 @@ plot_scheme_separate(
 )
 
 plot_error(phi_error, phi_label, dx, dt, C, D)
+
+print("BTCS AD splitting error :", np.mean(error_same - error_adv))
+print("BTCS DA splitting error :", np.mean(error_same - error_dif))
+print("CNCS AD splitting error :", np.mean(error_CNCS - error_CNCS_AD))
+print("CNCS DA splitting error :", np.mean(error_CNCS - error_CNCS_DA))

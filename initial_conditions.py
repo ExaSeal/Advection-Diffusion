@@ -59,7 +59,7 @@ def analytical_square_adv_dif(x, t, A, x_start, x_end, K, u):
     return phi
 
 
-def analytical_sine_adv_dif(u, K, L, A, x, t):
+def analytical_sine_adv_dif(u, K, k, L, A, x, t):
     """
     Analytical solution for 1D advection diffusion equation of a sine wave (periodic)
 
@@ -79,7 +79,7 @@ def analytical_sine_adv_dif(u, K, L, A, x, t):
     """
     phi_analytic = (
         A
-        * np.exp(-K * (2 * np.pi / L) ** 2 * t)
-        * np.sin((2 * np.pi / L) * (x - u * t))
+        * np.exp(-K * (2 * np.pi * k / (L)) ** 2 * t)
+        * np.sin((2 * np.pi * k / L) * (x - u * t))
     )
     return phi_analytic
