@@ -8,10 +8,10 @@ from misc_functions import *
 
 
 # Square wave settings
-A = 0.3
+A = 1
 x_start = 0.2
 x_end = 0.4
-k = 2
+k = 1
 
 # Domain size
 start_length = 0
@@ -19,10 +19,10 @@ end_length = 1
 L = end_length - start_length
 
 # Scheme setting
-K = 1e-3
+K = 0.005
 u = 1
-nx = 50
-nt = 50
+nx = 100
+nt = 100
 endtime = 1
 steps = 10
 
@@ -51,6 +51,7 @@ error_CNCS_DA = np.zeros(len(nt_list))
 error_FTBS = np.zeros(len(nt_list))
 error_FTBS_AD = np.zeros(len(nt_list))
 error_FTBS_DA = np.zeros(len(nt_list))
+error_FTBS_AD_with_correction = np.zeros(len(nt_list))
 # %%
 
 
@@ -60,13 +61,9 @@ for p in range(len(nt_list)):
 
     for j in range(nx):
         x[j] = dx * j
-        phi[j] = analytical_sine_adv_dif(
-            u, K, k, L, A, x[j], 0
-        ) + analytical_sine_adv_dif(u, K, 3, L, A, x[j], 0)
+        phi[j] = analytical_sine_adv_dif(u, K, k, L, A, x[j], 0)
 
-        phi_analytic[j] = analytical_sine_adv_dif(
-            u, K, k, L, A, x[j], nt * dt
-        ) + analytical_sine_adv_dif(u, K, 3, L, A, x[j], nt * dt)
+        phi_analytic[j] = analytical_sine_adv_dif(u, K, k, L, A, x[j], nt * dt)
     # Solve for Adv_Dif using different schemes and record values
 
     phi_same = BTCS_Adv_Dif_Periodic(phi.copy(), u, K, dx, dt, nt)
@@ -75,9 +72,12 @@ for p in range(len(nt_list)):
     phi_CNCS = CNCS(phi, u, K, dx, dt, nt)
     phi_CNCS_AD = CNCS_AD(phi, u, K, dx, dt, nt)
     phi_CNCS_DA = CNCS_DA(phi, u, K, dx, dt, nt)
-    # phi_FTBSCS = FTBSCS_Adv_Dif_periodic(phi, u, K, dx, dt, nt)
-    # phi_FTBSCS_AD = FTBSCS_Adv1_Dif2_periodic(phi, u, K, dx, dt, nt)
-    # phi_FTBSCS_DA = FTBSCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt)
+    phi_FTBSCS = FTBSCS_Adv_Dif_periodic(phi, u, K, dx, dt, nt)
+    phi_FTBSCS_AD = FTBSCS_Adv1_Dif2_periodic(phi, u, K, dx, dt, nt)
+    phi_FTBSCS_DA = FTBSCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt)
+    phi_FTBSCS_AD_with_correction = FTBSCS_Adv1_Dif2_periodic_wcorrect(
+        phi, u, K, dx, dt, nt
+    )
 
     phi_schemes = [
         phi_same,
@@ -86,9 +86,6 @@ for p in range(len(nt_list)):
         phi_CNCS,
         phi_CNCS_AD,
         phi_CNCS_DA,
-        # phi_FTBSCS,
-        # phi_FTBSCS_AD,
-        # phi_FTBSCS_DA,
     ]
     phi_label = [
         "BTCS",
@@ -97,9 +94,7 @@ for p in range(len(nt_list)):
         "CNCS",
         "CNCS_AD",
         "CNCS_DA",
-        # "FTBS",
-        # "FTBS_AD",
-        # "FTBS_DA",
+        "FTBS",
     ]
 
     # Plot results
@@ -121,10 +116,13 @@ for p in range(len(nt_list)):
     error_dif[p] = RMSE(phi_dif, phi_analytic)
     error_CNCS[p] = RMSE(phi_CNCS, phi_analytic)
     error_CNCS_AD[p] = RMSE(phi_CNCS_AD, phi_analytic)
-    error_CNCS_DA[p] = RMSE(phi_CNCS_AD, phi_analytic)
-    error_FTBS[p] = RMSE(phi_CNCS_AD, phi_analytic)
-    error_FTBS_AD[p] = RMSE(phi_CNCS_AD, phi_analytic)
-    error_FTBS_DA[p] = RMSE(phi_CNCS_AD, phi_analytic)
+    error_CNCS_DA[p] = RMSE(phi_CNCS_DA, phi_analytic)
+    error_FTBS[p] = RMSE(phi_FTBSCS, phi_analytic)
+    error_FTBS_AD[p] = RMSE(phi_FTBSCS_AD, phi_analytic)
+    error_FTBS_DA[p] = RMSE(phi_FTBSCS_DA, phi_analytic)
+    error_FTBS_AD_with_correction = RMSE(
+        phi_FTBSCS_AD_with_correction, phi_analytic
+    )
 
 
 phi_error = [
@@ -134,9 +132,10 @@ phi_error = [
     error_CNCS,
     error_CNCS_AD,
     error_CNCS_DA,
-    error_FTBS,
-    error_FTBS_AD,
-    error_FTBS_DA,
+    # error_FTBS,
+    # error_FTBS_AD,
+    # error_FTBS_DA,
+    # error_FTBS_AD_with_correction,
 ]
 
 
@@ -158,3 +157,9 @@ print("BTCS AD splitting error :", np.mean(error_same - error_adv))
 print("BTCS DA splitting error :", np.mean(error_same - error_dif))
 print("CNCS AD splitting error :", np.mean(error_CNCS - error_CNCS_AD))
 print("CNCS DA splitting error :", np.mean(error_CNCS - error_CNCS_DA))
+print("FTBS AD splitting error :", np.mean(error_FTBS - error_FTBS_AD))
+print("FTBS DA splitting error :", np.mean(error_FTBS - error_FTBS_DA))
+print(
+    "FTBS AD with correction splitting error :",
+    np.mean(error_FTBS - error_FTBS_AD_with_correction),
+)

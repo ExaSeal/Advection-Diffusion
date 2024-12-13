@@ -11,8 +11,42 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def RMSE(phi, phi_analytical):
-    RMSE = np.sqrt(sum((phi - phi_analytical) ** 2 / len(phi)))
+def RMSE(phi, phi_analytic):
+    """
+    Calculate the RMSE between the
+    estimate (phi) and true (phi_analytic) values
+
+    Parameters
+    ----------
+    phi : Estimate
+    phi_analytic : True value
+
+    Returns
+    -------
+    RMSE : Root Mean Square Error
+    """
+    RMSE = np.sqrt(sum((phi - phi_analytic) ** 2 / len(phi)))
+    return RMSE
+
+
+def l_2_norm(phi, phi_analytic, dx):
+    """
+    Calculate the l2 normalized error for convergence test over dx
+
+    Parameters
+    ----------
+    phi : Estimate
+    phi_analytic : True value
+    dx : Space step size
+
+    Returns
+    -------
+    RMSE : Root Mean Square Error
+    """
+    RMSE = np.sqrt(sum(dx * (phi - phi_analytic) ** 2)) / np.sqrt(
+        sum(dx * (phi) ** 2)
+    )
+
     return RMSE
 
 

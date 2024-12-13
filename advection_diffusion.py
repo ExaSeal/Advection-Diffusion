@@ -4,7 +4,6 @@ Created on Fri Nov  8 23:48:52 2024
 
 @author: Henry Yue
 """
-
 import numpy as np
 
 
@@ -67,45 +66,6 @@ def matrix_BTCS_adv_periodic(phi, u, dt, dx):
     return M_a
 
 
-def RMSE(phi, phi_analytic):
-    """
-    Calculate the RMSE between the
-    estimate (phi) and true (phi_analytic) values
-
-    Parameters
-    ----------
-    phi : Estimate
-    phi_analytic : True value
-
-    Returns
-    -------
-    RMSE : Root Mean Square Error
-    """
-    RMSE = np.sqrt(sum((phi - phi_analytic) ** 2 / len(phi)))
-    return RMSE
-
-
-def l_2_norm(phi, phi_analytic, dx):
-    """
-    Calculate the l2 normalized error for convergence test over dx
-
-    Parameters
-    ----------
-    phi : Estimate
-    phi_analytic : True value
-    dx : Space step size
-
-    Returns
-    -------
-    RMSE : Root Mean Square Error
-    """
-    RMSE = np.sqrt(sum(dx * (phi - phi_analytic) ** 2)) / np.sqrt(
-        sum(dx * (phi) ** 2)
-    )
-
-    return RMSE
-
-
 def BTCS_parallel_split(phi, u, K, dx, dt, nt):
     M_a = matrix_BTCS_adv_periodic(phi, u, dt, dx)
     M_d = matrix_BTCS_dif_periodic(phi, K, dt, dx)
@@ -162,7 +122,7 @@ def BTCS_Adv1_Dif2_Periodic(phi, u, K, dx, dt, nt):
 
     for i in range(nt):
         phi_a = np.linalg.solve(M_a, phi)
-        phi = np.dot(np.linalg.inv(M_d), phi_a)
+        phi = np.linalg.solve(M_d, phi_a)
     return phi
 
 
@@ -172,7 +132,7 @@ def BTCS_Adv2_Dif1_Periodic(phi, u, K, dx, dt, nt):
 
     for i in range(nt):
         phi_d = np.dot(np.linalg.inv(M_d), phi)
-        phi = np.dot(np.linalg.inv(M_a), phi_d)
+        phi = np.linalg.solve(M_a, phi_d)
     return phi
 
 
@@ -214,6 +174,35 @@ def FTBSCS_Adv1_Dif2_periodic(phi, u, K, dx, dt, nt):
     return phi
 
 
+def FTBSCS_Adv1_Dif2_periodic_wcorrect(phi, u, K, dx, dt, nt):
+    D = K * dt / dx**2
+    C = u * dt / dx
+
+    nx = len(phi)
+    phi_a = np.zeros(nx)
+    phi_ad = np.zeros(nx)
+    phi_diff = np.zeros(nx)
+
+    for i in range(nt):
+        for j in range(nx):
+            phi_a[j] = -C * (phi[(j)] - phi[(j - 1) % nx]) + phi[j]
+
+            phi_ad[j] = (
+                D * (phi_a[(j + 1) % nx] + phi_a[(j - 1) % nx] - 2 * phi_a[j])
+                + phi_a[j]
+            )
+
+            phi_diff[j] = ((C * D) / 2) * (
+                phi[(j + 2) % nx]
+                - 2 * phi[(j + 1) % nx]
+                + 2 * phi[(j - 1) % nx]
+                - phi[(j - 2) % nx]
+            )
+
+        phi = phi_ad + phi_diff
+    return phi
+
+
 def FTBSCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt):
     D = K * dt / dx**2
     C = u * dt / dx
@@ -230,69 +219,6 @@ def FTBSCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt):
             )
 
             phi_da[j] = -C * (phi_d[(j)] - phi_d[(j - 1) % nx]) + phi_d[j]
-
-        phi = phi_da.copy()
-    return phi
-
-
-def FTCSCS_Adv_Dif_periodic(phi, u, K, dx, dt, nt):
-    D = K * dt / (dx**2)
-    C = u * dt / dx
-    nx = len(phi)
-    phi_new = np.zeros(nx)
-
-    for i in range(nt):
-        for j in range(nx):
-            phi_new[j] = D * (
-                phi[(j + 1) % nx] + phi[(j - 1) % nx] - 2 * phi[j]
-            ) - 0.5 * C * (phi[(j + 1) % nx] - phi[(j - 1) % nx] + phi[j])
-        phi = phi_new.copy()
-    return phi
-
-
-def FTCSCS_Adv1_Dif2_periodic(phi, u, K, dx, dt, nt):
-    D = K * dt / dx**2
-    C = u * dt / dx
-
-    nx = len(phi)
-    phi_a = np.zeros(nx)
-    phi_ad = np.zeros(nx)
-
-    for i in range(nt):
-        for j in range(nx):
-            phi_a[j] = (
-                -0.5 * C * (phi[(j + 1) % nx] - phi[(j - 1) % nx] + phi[j])
-            )
-
-            phi_ad[j] = (
-                D * (phi[(j + 1) % nx] + phi[(j - 1) % nx] - 2 * phi[j])
-                + phi_ad[j]
-            )
-
-        phi = phi_ad.copy()
-    return phi
-
-
-def FTCSCS_Adv2_Dif1_periodic(phi, u, K, dx, dt, nt):
-    D = K * dt / dx**2
-    C = u * dt / dx
-
-    nx = len(phi)
-    phi_d = np.zeros(nx)
-    phi_da = np.zeros(nx)
-
-    for i in range(nt):
-        for j in range(nx):
-            phi_d[j] = (
-                D * (phi[(j + 1) % nx] + phi[(j - 1) % nx] - 2 * phi[j])
-                + phi[j]
-            )
-
-            phi_da[j] = (
-                -0.5
-                * C
-                * (phi_d[(j + 1) % nx] - phi_d[(j - 1) % nx] + phi_d[j])
-            )
 
         phi = phi_da.copy()
     return phi
