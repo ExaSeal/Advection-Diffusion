@@ -10,44 +10,51 @@ from scipy.stats import linregress
 import numpy as np
 import matplotlib.pyplot as plt
 
+line_styles = [
+    "o",
+    "^",
+    "v",
+    "D ",
+    "s",
+    "p",
+    "h",
+]  # Solid, dashed, dash-dot, dotted
 
-def RMSE(phi, phi_analytic):
+
+def RMSE(numerical_solution, analytical_solution):
     """
-    Calculate the RMSE between the
-    estimate (phi) and true (phi_analytic) values
+    Calculate the Root Mean Square Error (RMSE) between a numerical solution and an analytical solution.
 
-    Parameters
-    ----------
-    phi : Estimate
-    phi_analytic : True value
+    Parameters:
+    - numerical_solution (array-like): The numerical solution data.
+    - analytical_solution (array-like): The analytical solution data.
 
-    Returns
-    -------
-    RMSE : Root Mean Square Error
+    Returns:
+    - float: The RMSE value.
     """
-    RMSE = np.sqrt(sum((phi - phi_analytic) ** 2 / len(phi)))
-    return RMSE
+    # Ensure inputs are NumPy arrays for efficient operations
+    numerical_solution = np.array(numerical_solution)
+    analytical_solution = np.array(analytical_solution)
+
+    # Check if the lengths match
+    if numerical_solution.shape != analytical_solution.shape:
+        raise ValueError(
+            "Numerical and analytical solutions must have the same shape."
+        )
+
+    # Compute RMSE
+    mse = np.mean(
+        (numerical_solution - analytical_solution) ** 2
+    )  # Mean squared error
+    rmse = np.sqrt(mse)  # Root mean squared error
+
+    return rmse
 
 
-def l_2_norm(phi, phi_analytic, dx):
-    """
-    Calculate the l2 normalized error for convergence test over dx
-
-    Parameters
-    ----------
-    phi : Estimate
-    phi_analytic : True value
-    dx : Space step size
-
-    Returns
-    -------
-    RMSE : Root Mean Square Error
-    """
-    RMSE = np.sqrt(sum(dx * (phi - phi_analytic) ** 2)) / np.sqrt(
-        sum(dx * (phi) ** 2)
-    )
-
-    return RMSE
+def l2_norm(phi_num, phi_analytical, dx):
+    error = phi_num - phi_analytical
+    l2 = np.sqrt(np.sum(error**2) * dx)
+    return l2
 
 
 def plot_scheme(
@@ -56,26 +63,35 @@ def plot_scheme(
     dt,
     phi_initial,
     phi_analytical,
-    phi_schemes,
-    phi_label,
+    phi_schemes_n_labels,
     dom=[],
     ran=[],
 ):
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.set_xlim(dom[0], dom[1])
-    ax.set_ylim(ran[0], ran[1])
+    fig, ax = plt.subplots(figsize=(10, 6))  # Create a figure and axis
+    ax.set_xlim(dom[0], dom[1])  # Set domain (x-axis) limits
+    ax.set_ylim(ran[0], ran[1])  # Set range (y-axis) limits
 
-    plt.plot(x, phi_initial, alpha=0.5, label="Initial Condition", color="blue")
-    plt.plot(x, phi_analytical, alpha=0.5, label="Analytic")
+    # Plot the initial condition and analytical solution
+    ax.plot(
+        x,
+        phi_initial,
+        "--",
+        alpha=0.5,
+        label="Initial Condition",
+        color="blue",
+    )
+    ax.plot(x, phi_analytical, alpha=0.5, label="Analytic")
 
-    for scheme, label in zip(phi_schemes, phi_label):
-        plt.plot(x, scheme, label=label)
+    # Plot each numerical scheme
+    for scheme, label in phi_schemes_n_labels:
+        ax.plot(x, scheme, label=label)
 
-    plt.title(f"T={nt*dt:.3}")
-
+    # Add title, legend, and layout adjustments
+    ax.set_title(f"T={nt*dt:.3}")
     ax.legend(loc="upper left", bbox_to_anchor=(1.05, 1), borderaxespad=0.0)
     plt.tight_layout()
-    plt.show()
+
+    plt.show()  # Display the plot
 
 
 def plot_scheme_separate(
@@ -84,18 +100,22 @@ def plot_scheme_separate(
     dt,
     phi_initial,
     phi_analytical,
-    phi_schemes,
-    phi_label,
+    phi_schemes_n_labels,
     dom=[],
     ran=[],
 ):
-    for scheme, label in zip(phi_schemes, phi_label):
+    for scheme, label in phi_schemes_n_labels:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.set_xlim(dom[0], dom[1])
         ax.set_ylim(ran[0], ran[1])
 
-        plt.plot(
-            x, phi_initial, alpha=0.5, label="Initial Condition", color="blue"
+        ax.plot(
+            x,
+            phi_initial,
+            "--",
+            alpha=0.5,
+            label="Initial Condition",
+            color="blue",
         )
         plt.plot(x, phi_analytical, alpha=0.5, label="Analytic")
         plt.plot(x, scheme, label=label)
@@ -106,15 +126,20 @@ def plot_scheme_separate(
         plt.show()
 
 
-def plot_error(phi_error, phi_label, dx, dt, C, D):
+def plot_error(phi_errors_n_labels, dx, dt, C, D):
     fig, ax = plt.subplots(figsize=(10, 6))
     plt.ylabel("RMSE")
     plt.xlabel(f"Time simulated (x*{dt:.3})")
     plt.title(f"dx = {dx}, dt = {dt}, C = {C:.3f}, D = {D:.3f}")
+    color_palette = plt.cm.viridis(
+        np.linspace(0, 1, len(phi_errors_n_labels))
+    )  # Optional: Use a colormap for colors
 
     # Loop to plot errors and print average error
-    for error_values, label in zip(phi_error, phi_label):
-        plt.plot(error_values, label=label)
+    for i, (label, error_values) in enumerate(phi_errors_n_labels.items()):
+        color = color_palette[i]
+        line_style = line_styles[i % len(line_styles)]
+        plt.plot(error_values, line_style, label=label, color=color)
 
     ax.legend(loc="upper left", bbox_to_anchor=(1.05, 1), borderaxespad=0.0)
 
@@ -122,14 +147,16 @@ def plot_error(phi_error, phi_label, dx, dt, C, D):
     plt.show()
 
     # Chat GPT provides:
-    error_ranking = list(zip(phi_label, phi_error))
+    # Sort the errors by their mean value (ascending)
+    error_ranking_sorted = sorted(
+        phi_errors_n_labels.items(),  # Get (label, error_values) pairs
+        key=lambda x: np.mean(x[1]),  # Sort by mean error
+    )
 
-    # Sort by error (ascending)
-    error_ranking_sorted = sorted(error_ranking, key=lambda x: np.mean(x[1]))
-
-    # Print ranking
-    for rank, (label, error) in enumerate(error_ranking_sorted, 1):
-        print(f"{rank}. {label}: Mean Error = {np.mean(error):.3f}")
+    # Print the ranking
+    print("\nError Rankings (Lowest to Highest Mean Error):")
+    for rank, (label, error_values) in enumerate(error_ranking_sorted, 1):
+        print(f"{rank}. {label}: Mean Error = {np.mean(error_values):.3f}")
 
 
 def calc_slope(dx_list, error_list):

@@ -23,11 +23,11 @@ L = end_length - start_length
 
 # Scheme setting
 nx = 100
-nt = 100
+nt = 50
 endtime = 1
 t = endtime
-u_values = np.linspace(0, 1, 20)  # Range of Courant numbers
-K_values = np.linspace(0, 0.05, 20)  # Range of Diffusion numbers
+u_values = np.linspace(0, 5, 50)  # Range of Courant numbers
+K_values = np.linspace(0, 0.05, 50)  # Range of Diffusion numbers
 
 phi_analytic = analytical_sine_adv_dif
 dx = L / nx
@@ -46,13 +46,16 @@ def error_heatmap(
             # Initial conditions
             initcon = phi_analytic(u, K, k, L, A, x, 0)
             # Solve using the scheme
-            phi_numerical = phi_scheme(initcon, u, K, dx, dt, int(t / dt))
-            phi_numerical_split = phi_split(initcon, u, K, dx, dt, int(t / dt))
+            phi_numerical = phi_scheme(initcon, u, K, dx, dt, nt)
+            phi_numerical_split = phi_split(initcon, u, K, dx, dt, nt)
             phi_true = phi_analytic(u, K, k, L, A, x, t)
 
-            error_numerical[i, j] = RMSE(phi_numerical, phi_true)
-            error_numerical_split[i, j] = RMSE(phi_numerical_split, phi_true)
-            error_split = error_numerical - error_numerical_split
+            error_numerical[i, j] = l2_norm(phi_numerical, phi_true, dx)
+            error_numerical_split[i, j] = l2_norm(
+                phi_numerical_split, phi_true, dx
+            )
+
+    error_split = error_numerical - error_numerical_split
 
     return error_split
 
@@ -184,4 +187,22 @@ plot_heatmap(
     C_values,
     D_values,
     "DAD split error",
+)
+
+plot_heatmap(
+    error_heatmap(
+        ADA,
+        DAD,
+        analytical_sine_adv_dif,
+        u_values,
+        K_values,
+        dx,
+        dt,
+        L,
+        t,
+        A,
+    ),
+    C_values,
+    D_values,
+    "ADA-DAD advatage graph",
 )

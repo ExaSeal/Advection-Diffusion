@@ -7,6 +7,7 @@ Created on Mon Dec  2 20:04:15 2024
 
 import numpy as np
 from initial_conditions import *
+from misc_functions import *
 from advection_diffusion import *
 import matplotlib.pyplot as plt
 from matplotlib.colors import CenteredNorm
@@ -22,12 +23,12 @@ end_length = 1
 L = end_length - start_length
 
 # Scheme setting
-nx = 10
-nt = 10
+nx = 100
+nt = 50
 endtime = 2
 t = endtime
-u_values = np.linspace(0, 1, 20)  # Range of Courant numbers
-K_values = np.linspace(0, 0.1, 20)  # Range of Diffusion numbers
+u_values = np.linspace(0, 1, 50)  # Range of Courant numbers
+K_values = np.linspace(0, 0.01, 50)  # Range of Diffusion numbers
 
 phi_analytic = analytical_sine_adv_dif
 dx = L / nx
@@ -39,17 +40,18 @@ def error_heatmap(
 ):
     x = np.arange(0, L, dx)
     error_numerical = np.zeros((len(u_values), len(K_values)))
+    # Initial conditions
+    initcon = phi_analytic(0, 0, k, L, A, x, 0)
 
     for i, u in enumerate(u_values):
         for j, K in enumerate(K_values):
-            # Initial conditions
-            initcon = phi_analytic(u, K, k, L, A, x, 0)
+
             # Solve using the scheme
             phi_numerical = phi_scheme(initcon, u, K, dx, dt, nt)
             phi_true = phi_analytic(u, K, k, L, A, x, t)
 
             # Calculate RMSE
-            error_numerical[i, j] = np.average(phi_true - phi_numerical)
+            error_numerical[i, j] = l2_norm(phi_numerical, phi_true, dx)
 
     return error_numerical
 
@@ -61,8 +63,7 @@ def plot_heatmap(error, C_values, D_values, scheme_label):
         origin="lower",
         extent=[C_values.min(), C_values.max(), D_values.min(), D_values.max()],
         aspect="auto",
-        cmap="coolwarm",
-        norm=CenteredNorm(),
+        cmap="viridis",
     )
     plt.colorbar(label="RMSE")
     plt.xlabel("Courant Number (C)")

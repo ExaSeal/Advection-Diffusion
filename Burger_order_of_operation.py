@@ -39,14 +39,18 @@ dt = endtime / nt
 x = np.arange(start_length, end_length, dx)
 for j in range(nx):
     x[j] = dx * j
-    phi[j] = analytical_sine_adv_dif(u, K, k, L, A, x[j], 0)+0.5
+    phi[j] = analytical_sine_adv_dif(u, K, k, L, A, x[j], 0) + 0.5
 
 phi_BTCS = BTCS_nonlinear_Adv_Dif_Periodic(phi, K, dx, dt, nt)
 phi_BTCS_AD = BTCS_nonlinear_Adv1_Dif2_Periodic(phi, K, dx, dt, nt)
 phi_BTCS_DA = BTCS_nonlinear_Adv2_Dif1_Periodic(phi, K, dx, dt, nt)
 
-phi_schemes = [phi_BTCS, phi_BTCS_AD, phi_BTCS_DA]
-phi_label = ["BTCS", "BTCS AD", "BTCS DA"]
+
+schemes = [
+    (phi_BTCS, "BTCS"),
+    (phi_BTCS_AD, "BTCS AD"),
+    (phi_BTCS_DA, "BTCS DA"),
+]
 
 plot_scheme(
     x,
@@ -54,8 +58,7 @@ plot_scheme(
     dt,
     phi,
     phi_analytic,
-    phi_schemes,
-    phi_label,
+    schemes,
     [start_length, end_length],
     [0, A + 1],
 )
